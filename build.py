@@ -2,6 +2,7 @@
 """Build script: scrape visa bulletins into SQLite, export to JSON."""
 
 import argparse
+from datetime import date, timedelta
 import json
 import os
 import sys
@@ -131,7 +132,8 @@ def main():
     parser = argparse.ArgumentParser(description="Visa Bulletin build tool")
     parser.add_argument("--scrape", action="store_true", help="Scrape bulletins into SQLite")
     parser.add_argument("--start", default="2006-01", help="Start month (YYYY-MM)")
-    parser.add_argument("--end", default="2026-02", help="End month (YYYY-MM)")
+    next_month = (date.today().replace(day=1) + timedelta(days=32)).strftime("%Y-%m")
+    parser.add_argument("--end", default=next_month, help="End month (YYYY-MM)")
     parser.add_argument("--export", action="store_true", help="Export SQLite to JSON")
     args = parser.parse_args()
 

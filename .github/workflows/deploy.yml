@@ -34,7 +34,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Scrape & export data
-        run: python build.py --scrape --export --start 2006-01 --end $(date +%Y-%m)
+        run: python build.py --scrape --export --start 2006-01 --end $(date -d '+1 month' +%Y-%m 2>/dev/null || date -v+1m +%Y-%m)
 
       - name: Prepare site
         run: |

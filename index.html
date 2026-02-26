@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa Bulletin Tracker</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #1a1a2e; display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar { width: 260px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar h1 { font-size: 1.15rem; padding: 1.25rem 1rem; border-bottom: 1px solid #e0e0e0; }
+.sidebar nav { display: flex; flex-direction: column; }
+.sidebar nav button { background: none; border: none; border-bottom: 1px solid #eee; padding: 0.75rem 1.25rem; text-align: left; font-size: 0.95rem; cursor: pointer; color: #333; }
+.sidebar nav button:hover { background: #f0f0f0; }
+.sidebar nav button.active { background: #4361ee; color: #fff; font-weight: 600; }
+
+/* Main */
+.main { flex: 1; padding: 2rem 2.5rem; overflow-y: auto; }
+.main h2 { margin-bottom: 1.25rem; font-size: 1.4rem; }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
+.control-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.control-group label { font-size: 0.8rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.03em; }
+.control-group select, .control-group input { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; min-width: 180px; }
+.control-group select:focus { outline: none; border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
+
+/* Radio group */
+.radio-group { display: flex; gap: 0; }
+.radio-group label { padding: 0.45rem 0.9rem; border: 1px solid #ccc; cursor: pointer; font-size: 0.85rem; background: #fff; user-select: none; }
+.radio-group label:first-child { border-radius: 6px 0 0 6px; }
+.radio-group label:last-child { border-radius: 0 6px 6px 0; }
+.radio-group label:not(:first-child) { border-left: none; }
+.radio-group input { display: none; }
+.radio-group input:checked + span { background: #4361ee; color: #fff; margin: -0.45rem -0.9rem; padding: 0.45rem 0.9rem; display: inline-block; border-radius: inherit; }
+
+/* Multi-select */
+.multi-select { position: relative; min-width: 220px; }
+.multi-select .ms-display { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; cursor: pointer; min-height: 2.1rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.multi-select .ms-display:focus-within { border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
+.multi-select .ms-tag { background: #e8ecff; color: #4361ee; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.2rem; }
+.multi-select .ms-tag .ms-remove { cursor: pointer; font-weight: bold; }
+.multi-select .ms-placeholder { color: #999; font-size: 0.85rem; }
+.multi-select .ms-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 6px; margin-top: 2px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.multi-select.open .ms-dropdown { display: block; }
+.multi-select .ms-option { padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; }
+.multi-select .ms-option:hover { background: #f0f0f0; }
+.multi-select .ms-option.selected { background: #e8ecff; }
+.multi-select .ms-option input { accent-color: #4361ee; }
+
+/* Table */
+table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+th { background: #f5f6fa; font-weight: 600; color: #555; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; }
+tr:hover td { background: #f8f9ff; }
+
+/* Movement colors */
+.mov-positive { color: #16a34a; font-weight: 600; }
+.mov-negative { color: #dc2626; font-weight: 600; }
+.mov-current { color: #4361ee; font-weight: 600; }
+
+/* Chart container */
+#trend-chart { width: 100%; min-height: 500px; }
+
+/* Info box */
+.info { padding: 1rem; background: #e8ecff; border-radius: 8px; color: #4361ee; font-size: 0.9rem; }
+
+/* Loading */
+#loading { display: flex; align-items: center; justify-content: center; height: 60vh; font-size: 1.1rem; color: #888; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h1>Visa Bulletin Tracker</h1>
+  <nav id="nav"></nav>
+</aside>
+
+<div class="main">
+  <div id="loading">Loading bulletin data...</div>
+  <div id="app" style="display:none">
+    <div id="view-monthly" style="display:none">
+      <h2>Monthly View</h2>
+      <div class="controls" id="monthly-controls"></div>
+      <div id="monthly-table"></div>
+    </div>
+    <div id="view-trend" style="display:none">
+      <h2>Trend Analysis</h2>
+      <div class="controls" id="trend-controls"></div>
+      <div id="trend-chart"></div>
+    </div>
+    <div id="view-compare" style="display:none">
+      <h2>Compare Months</h2>
+      <div class="controls" id="compare-controls"></div>
+      <div id="compare-table"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let D; // global data
+const VIEWS = ["monthly", "trend", "compare"];
+const VIEW_LABELS = { monthly: "Monthly View", trend: "Trend", compare: "Compare" };
+let currentView = "monthly";
+
+const COUNTRY_ORDER = ["All Chargeability Areas", "China", "India", "Mexico", "Philippines"];
+const EB_ORDER = ["EB-1", "EB-2", "EB-3", "EB-3 Other Workers", "EB-4", "EB-4 Religious Workers",
+  "EB-5 Unreserved", "EB-5 Rural", "EB-5 High Unemployment", "EB-5 Infrastructure"];
+const FAM_ORDER = ["F1", "F2A", "F2B", "F3", "F4"];
+
+function sortByOrder(items, order) {
+  const inOrder = order.filter(c => items.includes(c));
+  const rest = items.filter(c => !order.includes(c)).sort();
+  return [...inOrder, ...rest];
+}
+
+// ── Data loading ──
+async function loadData() {
+  const resp = await fetch("data/bulletin_data.json");
+  if (!resp.ok) throw new Error("Could not load data/bulletin_data.json — run build.py --export first");
+  D = await resp.json();
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  buildNav();
+  buildMonthlyControls();
+  buildTrendControls();
+  buildCompareControls();
+  showView("monthly");
+}
+
+// ── Navigation ──
+function buildNav() {
+  const nav = document.getElementById("nav");
+  VIEWS.forEach(v => {
+    const btn = document.createElement("button");
+    btn.textContent = VIEW_LABELS[v];
+    btn.dataset.view = v;
+    btn.onclick = () => showView(v);
+    nav.appendChild(btn);
+  });
+}
+
+function showView(v) {
+  currentView = v;
+  VIEWS.forEach(id => document.getElementById("view-" + id).style.display = id === v ? "" : "none");
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  if (v === "monthly") renderMonthly();
+  else if (v === "trend") renderTrend();
+  else if (v === "compare") renderCompare();
+}
+
+// ── Helpers ──
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => {
+    if (k === "className") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  });
+  children.forEach(c => { if (typeof c === "string") e.appendChild(document.createTextNode(c)); else if (c) e.appendChild(c); });
+  return e;
+}
+
+function makeSelect(id, options, selected, onChange) {
+  const sel = el("select", { id });
+  options.forEach(o => {
+    const opt = el("option", { value: o }, o);
+    if (o === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => onChange(sel.value);
+  return sel;
+}
+
+function makeRadio(name, options, selected, onChange) {
+  const div = el("div", { className: "radio-group" });
+  options.forEach(o => {
+    const id = name + "-" + o.value;
+    const inp = el("input", { type: "radio", name, id, value: o.value });
+    if (o.value === selected) inp.checked = true;
+    inp.onchange = () => onChange(o.value);
+    const lbl = el("label", { for: id }, inp, el("span", null, o.label));
+    div.appendChild(lbl);
+  });
+  return div;
+}
+
+function makeMultiSelect(id, options, selected, onChange) {
+  const container = el("div", { className: "multi-select", id });
+  const display = el("div", { className: "ms-display" });
+  const dropdown = el("div", { className: "ms-dropdown" });
+  let values = [...selected];
+
+  function render() {
+    display.innerHTML = "";
+    if (values.length === 0) {
+      display.appendChild(el("span", { className: "ms-placeholder" }, "Select..."));
+    } else {
+      values.forEach(v => {
+        const tag = el("span", { className: "ms-tag" }, v,
+          el("span", { className: "ms-remove", onClick: (e) => { e.stopPropagation(); toggle(v); } }, "\u00d7"));
+        display.appendChild(tag);
+      });
+    }
+    dropdown.querySelectorAll(".ms-option").forEach(opt => {
+      opt.classList.toggle("selected", values.includes(opt.dataset.value));
+      opt.querySelector("input").checked = values.includes(opt.dataset.value);
+    });
+  }
+
+  function toggle(v) {
+    if (values.includes(v)) values = values.filter(x => x !== v);
+    else values.push(v);
+    render();
+    onChange(values);
+  }
+
+  options.forEach(o => {
+    const cb = el("input", { type: "checkbox" });
+    cb.checked = values.includes(o);
+    const opt = el("div", { className: "ms-option", "data-value": o, onClick: () => toggle(o) }, cb, el("span", null, o));
+    opt.dataset.value = o;
+    dropdown.appendChild(opt);
+  });
+
+  display.onclick = (e) => {
+    e.stopPropagation();
+    container.classList.toggle("open");
+  };
+
+  document.addEventListener("click", () => container.classList.remove("open"));
+  container.appendChild(display);
+  container.appendChild(dropdown);
+  render();
+  container._getValues = () => values;
+  container._setOptions = (newOpts, newSelected) => {
+    values = [...newSelected];
+    dropdown.innerHTML = "";
+    newOpts.forEach(o => {
+      const cb = el("input", { type: "checkbox" });
+      cb.checked = values.includes(o);
+      const opt = el("div", { className: "ms-option", "data-value": o, onClick: () => toggle(o) }, cb, el("span", null, o));
+      opt.dataset.value = o;
+      dropdown.appendChild(opt);
+    });
+    render();
+    onChange(values);
+  };
+  return container;
+}
+
+function cg(label, child) {
+  return el("div", { className: "control-group" }, el("label", null, label), child);
+}
+
+// ── Monthly View ──
+let mState = { month: "", tableType: "final_action", visaType: "employment" };
+
+function buildMonthlyControls() {
+  mState.month = D.months[0] || "";
+  const c = document.getElementById("monthly-controls");
+  c.innerHTML = "";
+  c.appendChild(cg("Bulletin Month", makeSelect("m-month", D.months, mState.month, v => { mState.month = v; renderMonthly(); })));
+  c.appendChild(cg("Table Type", makeRadio("m-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], mState.tableType, v => { mState.tableType = v; renderMonthly(); })));
+  c.appendChild(cg("Visa Type", makeRadio("m-vt", [{ label: "Employment", value: "employment" }, { label: "Family", value: "family" }], mState.visaType, v => { mState.visaType = v; renderMonthly(); })));
+}
+
+function renderMonthly() {
+  const container = document.getElementById("monthly-table");
+  const records = (D.data[mState.month] || []).filter(r => r.tt === mState.tableType && r.vt === mState.visaType);
+  if (!records.length) { container.innerHTML = '<div class="info">No data for this selection.</div>'; return; }
+
+  const countries = sortByOrder([...new Set(records.map(r => r.co))], COUNTRY_ORDER);
+  const catOrder = mState.visaType === "employment" ? EB_ORDER : FAM_ORDER;
+  const cats = sortByOrder([...new Set(records.map(r => r.cat))], catOrder);
+
+  const lookup = {};
+  records.forEach(r => { lookup[r.cat + "|" + r.co] = r.pd; });
+
+  const table = el("table");
+  const thead = el("tr", null, el("th", null, "Category"));
+  countries.forEach(c => thead.appendChild(el("th", null, c)));
+  table.appendChild(el("thead", null, thead));
+  const tbody = el("tbody");
+  cats.forEach(cat => {
+    const tr = el("tr", null, el("td", null, cat));
+    countries.forEach(co => tr.appendChild(el("td", null, lookup[cat + "|" + co] || "")));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.innerHTML = "";
+  container.appendChild(table);
+}
+
+// ── Trend ──
+let tState = { visaType: "employment", cats: ["EB-2"], countries: ["India"], tableType: "final_action" };
+let tCatMs, tCountryMs;
+
+function buildTrendControls() {
+  const c = document.getElementById("trend-controls");
+  c.innerHTML = "";
+  const cats = D.categories[tState.visaType] || [];
+  const defaultCats = cats.includes("EB-2") ? ["EB-2"] : cats.slice(0, 1);
+  const defaultCountries = D.countries.includes("India") ? ["India"] : D.countries.slice(0, 1);
+  tState.cats = defaultCats;
+  tState.countries = defaultCountries;
+
+  const vtSelect = makeSelect("t-vt", ["employment", "family"], tState.visaType, v => {
+    tState.visaType = v;
+    const newCats = D.categories[v] || [];
+    const defCat = v === "employment" && newCats.includes("EB-2") ? ["EB-2"] : newCats.slice(0, 1);
+    tCatMs._setOptions(newCats, defCat);
+  });
+
+  tCatMs = makeMultiSelect("t-cats", cats, tState.cats, v => { tState.cats = v; renderTrend(); });
+  tCountryMs = makeMultiSelect("t-countries", D.countries, tState.countries, v => { tState.countries = v; renderTrend(); });
+
+  c.appendChild(cg("Visa Type", vtSelect));
+  c.appendChild(cg("Categories", tCatMs));
+  c.appendChild(cg("Countries", tCountryMs));
+  c.appendChild(cg("Table Type", makeRadio("t-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], tState.tableType, v => { tState.tableType = v; renderTrend(); })));
+}
+
+function parsePdForChart(pd, bulletinMonth) {
+  if (pd === "C") return new Date(bulletinMonth + "-01");
+  if (pd === "U") return null;
+  const d = new Date(pd);
+  return isNaN(d) ? null : d;
+}
+
+function renderTrend() {
+  const chartDiv = document.getElementById("trend-chart");
+  if (!tState.cats.length || !tState.countries.length) {
+    chartDiv.innerHTML = '<div class="info">Select at least one category and one country.</div>';
+    return;
+  }
+
+  const colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+  const traces = [];
+  let ci = 0;
+  const multiSeries = tState.cats.length > 1 || tState.countries.length > 1;
+
+  tState.cats.forEach(cat => {
+    tState.countries.forEach(country => {
+      const label = multiSeries ? `${cat} - ${country}` : cat;
+      // Collect data across all months in chronological order
+      const sortedMonths = [...D.months].sort();
+      const xs = [], ys = [];
+      sortedMonths.forEach(m => {
+        const records = D.data[m] || [];
+        const rec = records.find(r => r.tt === tState.tableType && r.vt === tState.visaType && r.cat === cat && r.co === country);
+        if (rec) {
+          const d = parsePdForChart(rec.pd, m);
+          if (d !== null) {
+            xs.push(m);
+            ys.push(d);
+          } else {
+            // U — insert gap
+            xs.push(m);
+            ys.push(null);
+          }
+        }
+      });
+      if (xs.length) {
+        traces.push({
+          x: xs, y: ys, type: "scatter", mode: "lines+markers",
+          name: label, line: { color: colors[ci % colors.length], width: 2 },
+          marker: { size: 4 }, connectgaps: false,
+        });
+        ci++;
+      }
+    });
+  });
+
+  if (!traces.length) {
+    chartDiv.innerHTML = '<div class="info">No trend data for this selection.</div>';
+    return;
+  }
+
+  const ttLabel = tState.tableType === "final_action" ? "Final Action" : "Filing";
+  Plotly.newPlot(chartDiv, traces, {
+    title: `Priority Date Trend (${ttLabel} Dates)`,
+    xaxis: { title: "Bulletin Month", type: "category", tickangle: 45 },
+    yaxis: { title: "Priority Date", tickformat: "%Y-%m-%d" },
+    hovermode: "x unified",
+    template: "plotly_white",
+    height: 520,
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
+    margin: { t: 80 },
+  }, { responsive: true });
+}
+
+// ── Compare ──
+let cmpState = { monthA: "", monthB: "", visaType: "employment", country: "India", tableType: "final_action" };
+
+function buildCompareControls() {
+  cmpState.monthA = D.months[Math.min(1, D.months.length - 1)] || "";
+  cmpState.monthB = D.months[0] || "";
+  if (!D.countries.includes(cmpState.country)) cmpState.country = D.countries[0] || "";
+
+  const c = document.getElementById("compare-controls");
+  c.innerHTML = "";
+  c.appendChild(cg("Month A", makeSelect("c-ma", D.months, cmpState.monthA, v => { cmpState.monthA = v; renderCompare(); })));
+  c.appendChild(cg("Month B", makeSelect("c-mb", D.months, cmpState.monthB, v => { cmpState.monthB = v; renderCompare(); })));
+  c.appendChild(cg("Visa Type", makeSelect("c-vt", ["Employment", "Family"], cmpState.visaType === "employment" ? "Employment" : "Family",
+    v => { cmpState.visaType = v.toLowerCase(); renderCompare(); })));
+  c.appendChild(cg("Country", makeSelect("c-co", D.countries, cmpState.country, v => { cmpState.country = v; renderCompare(); })));
+  c.appendChild(cg("Table Type", makeRadio("c-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], cmpState.tableType, v => { cmpState.tableType = v; renderCompare(); })));
+}
+
+function renderCompare() {
+  const container = document.getElementById("compare-table");
+  const dataA = D.data[cmpState.monthA] || [];
+  const dataB = D.data[cmpState.monthB] || [];
+
+  function find(data, cat) {
+    return (data.find(r => r.tt === cmpState.tableType && r.vt === cmpState.visaType && r.cat === cat && r.co === cmpState.country) || {}).pd || "";
+  }
+
+  function movement(a, b) {
+    if (!a || !b) return ["", ""];
+    if (a !== "C" && a !== "U" && b !== "C" && b !== "U") {
+      const da = new Date(a), db = new Date(b);
+      if (!isNaN(da) && !isNaN(db)) {
+        const days = Math.round((db - da) / 86400000);
+        const sign = days > 0 ? "+" : "";
+        const cls = days > 0 ? "mov-positive" : days < 0 ? "mov-negative" : "";
+        return [`${sign}${days}`, cls];
+      }
+    }
+    if (a === "C" && b === "C") return ["Current", "mov-current"];
+    if (b === "C") return ["Became Current", "mov-positive"];
+    if (a === "C") return ["Retrogressed", "mov-negative"];
+    return ["", ""];
+  }
+
+  const catOrder = cmpState.visaType === "employment" ? EB_ORDER : FAM_ORDER;
+  const allCats = D.categories[cmpState.visaType] || [];
+  const cats = sortByOrder(allCats, catOrder);
+
+  const ttLabel = cmpState.tableType === "final_action" ? "Final Action" : "Filing";
+
+  const table = el("table");
+  const thead = el("tr", null, el("th", null, "Category"), el("th", null, cmpState.monthA), el("th", null, cmpState.monthB), el("th", null, "Movement (days)"));
+  table.appendChild(el("thead", null, thead));
+  const tbody = el("tbody");
+  let hasRows = false;
+  cats.forEach(cat => {
+    const va = find(dataA, cat);
+    const vb = find(dataB, cat);
+    if (!va && !vb) return;
+    hasRows = true;
+    const [movText, movCls] = movement(va, vb);
+    const tr = el("tr", null,
+      el("td", null, cat),
+      el("td", null, va),
+      el("td", null, vb),
+      el("td", { className: movCls }, movText)
+    );
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  container.innerHTML = "";
+  if (!hasRows) {
+    container.innerHTML = '<div class="info">No data for this selection.</div>';
+  } else {
+    const heading = el("h3", { style: "margin-bottom: 0.75rem; font-size: 1.1rem; color: #555;" },
+      `${cmpState.country} \u2014 ${ttLabel} Dates`);
+    container.appendChild(heading);
+    container.appendChild(table);
+  }
+}
+
+// ── Init ──
+loadData().catch(err => {
+  document.getElementById("loading").textContent = "Error: " + err.message;
+  document.getElementById("loading").style.color = "#dc2626";
+});
+</script>
+</body>
+</html>

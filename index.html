@@ -7,70 +7,70 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #1a1a2e; display: flex; min-height: 100vh; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0e1117; color: #fafafa; display: flex; min-height: 100vh; }
 
 /* Sidebar */
-.sidebar { width: 260px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar h1 { font-size: 1.15rem; padding: 1.25rem 1rem; border-bottom: 1px solid #e0e0e0; }
+.sidebar { width: 260px; background: #262730; border-right: 1px solid #3d3d4e; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar h1 { font-size: 1.15rem; padding: 1.25rem 1rem; border-bottom: 1px solid #3d3d4e; color: #fafafa; }
 .sidebar nav { display: flex; flex-direction: column; }
-.sidebar nav button { background: none; border: none; border-bottom: 1px solid #eee; padding: 0.75rem 1.25rem; text-align: left; font-size: 0.95rem; cursor: pointer; color: #333; }
-.sidebar nav button:hover { background: #f0f0f0; }
-.sidebar nav button.active { background: #4361ee; color: #fff; font-weight: 600; }
+.sidebar nav button { background: none; border: none; border-bottom: 1px solid #3d3d4e; padding: 0.75rem 1.25rem; text-align: left; font-size: 0.95rem; cursor: pointer; color: #ccc; }
+.sidebar nav button:hover { background: #3d3d4e; }
+.sidebar nav button.active { background: #ff4b4b; color: #fff; font-weight: 600; }
 
 /* Main */
 .main { flex: 1; padding: 2rem 2.5rem; overflow-y: auto; }
-.main h2 { margin-bottom: 1.25rem; font-size: 1.4rem; }
+.main h2 { margin-bottom: 1.25rem; font-size: 1.4rem; color: #fafafa; }
 
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
 .control-group { display: flex; flex-direction: column; gap: 0.3rem; flex: none; max-width: 220px; }
-.control-group label { font-size: 0.8rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.03em; }
-.control-group select { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; width: 180px; }
-.control-group select:focus { outline: none; border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
+.control-group label { font-size: 0.8rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.03em; }
+.control-group select { padding: 0.45rem 0.6rem; border: 1px solid #3d3d4e; border-radius: 6px; font-size: 0.9rem; background: #262730; color: #fafafa; width: 180px; }
+.control-group select:focus { outline: none; border-color: #ff4b4b; box-shadow: 0 0 0 2px rgba(255,75,75,0.25); }
 
 /* Radio group */
 .radio-group { display: flex; gap: 0; }
-.radio-group label { padding: 0.45rem 0.9rem; border: 1px solid #ccc; cursor: pointer; font-size: 0.85rem; background: #fff; user-select: none; }
+.radio-group label { padding: 0.45rem 0.9rem; border: 1px solid #3d3d4e; cursor: pointer; font-size: 0.85rem; background: #262730; color: #ccc; user-select: none; }
 .radio-group label:first-child { border-radius: 6px 0 0 6px; }
 .radio-group label:last-child { border-radius: 0 6px 6px 0; }
 .radio-group label:not(:first-child) { border-left: none; }
 .radio-group input { display: none; }
-.radio-group input:checked + span { background: #4361ee; color: #fff; margin: -0.45rem -0.9rem; padding: 0.45rem 0.9rem; display: inline-block; border-radius: inherit; }
+.radio-group input:checked + span { background: #ff4b4b; color: #fff; margin: -0.45rem -0.9rem; padding: 0.45rem 0.9rem; display: inline-block; border-radius: inherit; }
 
 /* Multi-select */
 .multi-select { position: relative; width: 220px; }
-.multi-select .ms-display { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; cursor: pointer; min-height: 2.1rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
-.multi-select .ms-display:focus-within { border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
-.multi-select .ms-tag { background: #e8ecff; color: #4361ee; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.2rem; }
+.multi-select .ms-display { padding: 0.45rem 0.6rem; border: 1px solid #3d3d4e; border-radius: 6px; font-size: 0.9rem; background: #262730; color: #fafafa; cursor: pointer; min-height: 2.1rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.multi-select .ms-display:focus-within { border-color: #ff4b4b; box-shadow: 0 0 0 2px rgba(255,75,75,0.25); }
+.multi-select .ms-tag { background: #3d1f1f; color: #ff4b4b; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.2rem; }
 .multi-select .ms-tag .ms-remove { cursor: pointer; font-weight: bold; }
-.multi-select .ms-placeholder { color: #999; font-size: 0.85rem; }
-.multi-select .ms-dropdown { position: absolute; top: 100%; left: 0; width: max-content; min-width: 100%; background: #fff; border: 1px solid #ccc; border-radius: 6px; margin-top: 2px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.multi-select .ms-placeholder { color: #666; font-size: 0.85rem; }
+.multi-select .ms-dropdown { position: absolute; top: 100%; left: 0; width: max-content; min-width: 100%; background: #262730; border: 1px solid #3d3d4e; border-radius: 6px; margin-top: 2px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .multi-select.open .ms-dropdown { display: block; }
-.multi-select .ms-option { padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; }
-.multi-select .ms-option:hover { background: #f0f0f0; }
-.multi-select .ms-option.selected { background: #e8ecff; }
-.multi-select .ms-option input { accent-color: #4361ee; flex: none; width: 16px; height: 16px; margin: 0; }
+.multi-select .ms-option { padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; color: #ccc; }
+.multi-select .ms-option:hover { background: #3d3d4e; }
+.multi-select .ms-option.selected { background: #3d1f1f; }
+.multi-select .ms-option input { accent-color: #ff4b4b; flex: none; width: 16px; height: 16px; margin: 0; }
 .multi-select .ms-option span { white-space: nowrap; flex: none; }
 
 /* Table */
-table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-th { background: #f5f6fa; font-weight: 600; color: #555; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; }
-tr:hover td { background: #f8f9ff; }
+table { border-collapse: collapse; width: 100%; background: #262730; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #3d3d4e; font-size: 0.9rem; color: #ddd; }
+th { background: #1a1a2e; font-weight: 600; color: #aaa; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; }
+tr:hover td { background: #1a1a2e; }
 
 /* Movement colors */
-.mov-positive { color: #16a34a; font-weight: 600; }
-.mov-negative { color: #dc2626; font-weight: 600; }
-.mov-current { color: #4361ee; font-weight: 600; }
+.mov-positive { color: #4ade80; font-weight: 600; }
+.mov-negative { color: #ff4b4b; font-weight: 600; }
+.mov-current { color: #60a5fa; font-weight: 600; }
 
 /* Chart container */
 #trend-chart { width: 100%; min-height: 500px; }
 
 /* Info box */
-.info { padding: 1rem; background: #e8ecff; border-radius: 8px; color: #4361ee; font-size: 0.9rem; }
+.info { padding: 1rem; background: #3d1f1f; border-radius: 8px; color: #ff4b4b; font-size: 0.9rem; }
 
 /* Loading */
-#loading { display: flex; align-items: center; justify-content: center; height: 60vh; font-size: 1.1rem; color: #888; }
+#loading { display: flex; align-items: center; justify-content: center; height: 60vh; font-size: 1.1rem; color: #666; }
 </style>
 </head>
 <body>
@@ -103,9 +103,9 @@ tr:hover td { background: #f8f9ff; }
 
 <script>
 let D; // global data
-const VIEWS = ["monthly", "trend", "compare"];
-const VIEW_LABELS = { monthly: "Monthly View", trend: "Trend", compare: "Compare" };
-let currentView = "monthly";
+const VIEWS = ["trend", "monthly", "compare"];
+const VIEW_LABELS = { trend: "Trend", monthly: "Monthly View", compare: "Compare" };
+let currentView = "trend";
 
 const COUNTRY_ORDER = ["All Chargeability Areas", "China", "India", "Mexico", "Philippines"];
 const EB_ORDER = ["EB-1", "EB-2", "EB-3", "EB-3 Other Workers", "EB-4", "EB-4 Religious Workers",
@@ -129,7 +129,7 @@ async function loadData() {
   buildMonthlyControls();
   buildTrendControls();
   buildCompareControls();
-  showView("monthly");
+  showView("trend");
 }
 
 // ── Navigation ──
@@ -387,7 +387,9 @@ function renderTrend() {
     xaxis: { title: "Bulletin Month", type: "category", tickangle: 45 },
     yaxis: { title: "Priority Date", tickformat: "%Y-%m-%d" },
     hovermode: "x unified",
-    template: "plotly_white",
+    template: "plotly_dark",
+    paper_bgcolor: "#0e1117",
+    plot_bgcolor: "#0e1117",
     height: 520,
     legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
     margin: { t: 80 },

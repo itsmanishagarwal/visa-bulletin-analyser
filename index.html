@@ -381,17 +381,23 @@ function renderTrend() {
     return;
   }
 
+  // Build tick values/labels showing only Jan of each year
+  const allXMonths = [...new Set(traces.flatMap(t => t.x))].sort();
+  const tickVals = allXMonths.filter(m => m.endsWith("-01"));
+  const tickText = tickVals.map(m => m.slice(0, 4));
+
   const ttLabel = tState.tableType === "final_action" ? "Final Action" : "Filing";
   Plotly.newPlot(chartDiv, traces, {
     title: `Priority Date Trend (${ttLabel} Dates)`,
-    xaxis: { title: "Bulletin Month", type: "category", tickangle: 45 },
-    yaxis: { title: "Priority Date", tickformat: "%Y-%m-%d" },
+    xaxis: { title: { text: "Bulletin Month", font: { color: "#aaa" } }, type: "category", tickvals: tickVals, ticktext: tickText, tickangle: 0, tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
+    yaxis: { title: { text: "Priority Date", font: { color: "#aaa" } }, tickformat: "%Y", dtick: "M12", hoverformat: "%Y-%m-%d", tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
     hovermode: "x unified",
     template: "plotly_dark",
     paper_bgcolor: "#0e1117",
     plot_bgcolor: "#0e1117",
+    font: { color: "#ccc" },
     height: 520,
-    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1, font: { color: "#ccc" } },
     margin: { t: 80 },
   }, { responsive: true });
 }

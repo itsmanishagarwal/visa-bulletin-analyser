@@ -388,9 +388,9 @@ function renderTrend() {
 
   const ttLabel = tState.tableType === "final_action" ? "Final Action" : "Filing";
   Plotly.newPlot(chartDiv, traces, {
-    title: `Priority Date Trend (${ttLabel} Dates)`,
-    xaxis: { title: { text: "Bulletin Month", font: { color: "#aaa" } }, type: "category", tickvals: tickVals, ticktext: tickText, tickangle: 0, tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
-    yaxis: { title: { text: "Priority Date", font: { color: "#aaa" } }, tickformat: "%Y", dtick: "M12", hoverformat: "%Y-%m-%d", tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
+    title: { text: `Priority Date Trend (${ttLabel} Dates)`, font: { color: "#fafafa" } },
+    xaxis: { title: { text: "Bulletin Month", font: { color: "#ccc" } }, type: "category", tickvals: tickVals, ticktext: tickText, tickangle: 0, tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
+    yaxis: { title: { text: "Priority Date", font: { color: "#ccc" } }, tickformat: "%Y", dtick: "M12", hoverformat: "%Y-%m-%d", tickfont: { color: "#aaa", size: 11 }, gridcolor: "#2a2a3e" },
     hovermode: "x unified",
     template: "plotly_dark",
     paper_bgcolor: "#0e1117",

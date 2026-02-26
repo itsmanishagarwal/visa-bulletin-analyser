@@ -23,9 +23,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
-.control-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.control-group { display: flex; flex-direction: column; gap: 0.3rem; flex: none; max-width: 220px; }
 .control-group label { font-size: 0.8rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.03em; }
-.control-group select, .control-group input { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; min-width: 180px; }
+.control-group select { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; width: 180px; }
 .control-group select:focus { outline: none; border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
 
 /* Radio group */
@@ -38,18 +38,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .radio-group input:checked + span { background: #4361ee; color: #fff; margin: -0.45rem -0.9rem; padding: 0.45rem 0.9rem; display: inline-block; border-radius: inherit; }
 
 /* Multi-select */
-.multi-select { position: relative; min-width: 220px; }
+.multi-select { position: relative; width: 220px; }
 .multi-select .ms-display { padding: 0.45rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; cursor: pointer; min-height: 2.1rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .multi-select .ms-display:focus-within { border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,0.15); }
 .multi-select .ms-tag { background: #e8ecff; color: #4361ee; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.2rem; }
 .multi-select .ms-tag .ms-remove { cursor: pointer; font-weight: bold; }
 .multi-select .ms-placeholder { color: #999; font-size: 0.85rem; }
-.multi-select .ms-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 6px; margin-top: 2px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.multi-select .ms-dropdown { position: absolute; top: 100%; left: 0; width: max-content; min-width: 100%; background: #fff; border: 1px solid #ccc; border-radius: 6px; margin-top: 2px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .multi-select.open .ms-dropdown { display: block; }
-.multi-select .ms-option { padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; }
+.multi-select .ms-option { padding: 0.4rem 0.6rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; }
 .multi-select .ms-option:hover { background: #f0f0f0; }
 .multi-select .ms-option.selected { background: #e8ecff; }
-.multi-select .ms-option input { accent-color: #4361ee; }
+.multi-select .ms-option input { accent-color: #4361ee; flex: none; width: 16px; height: 16px; margin: 0; }
+.multi-select .ms-option span { white-space: nowrap; flex: none; }
 
 /* Table */
 table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }

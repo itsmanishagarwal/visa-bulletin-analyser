@@ -94,7 +94,8 @@ def normalize_country(raw):
     if abbrev in abbrev_map:
         return abbrev_map[abbrev]
 
-    return cleaned
+    # Skip unrecognized countries — only keep the 5 canonical ones
+    return None
 
 
 def normalize_category(raw, visa_type):
@@ -215,14 +216,14 @@ def parse_bulletin(html):
         seen_count[visa_type] += 1
         table_type = "final_action" if seen_count[visa_type] == 1 else "filing"
 
-        # Parse country headers (skip first column)
-        countries = []
-        for cell in header_cells[1:]:
+        # Parse country headers (skip first column), track valid column indices
+        country_cols = []  # list of (column_index, country_name)
+        for i, cell in enumerate(header_cells[1:]):
             country = normalize_country(cell.get_text(strip=True))
             if country:
-                countries.append(country)
+                country_cols.append((i, country))
 
-        if not countries:
+        if not country_cols:
             continue
 
         for row in rows[1:]:
@@ -236,10 +237,10 @@ def parse_bulletin(html):
 
             category = normalize_category(raw_category, visa_type)
 
-            for i, cell in enumerate(cells[1:]):
-                if i >= len(countries):
+            for col_idx, country in country_cols:
+                if col_idx >= len(cells) - 1:
                     break
-                date_text = cell.get_text(strip=True)
+                date_text = cells[col_idx + 1].get_text(strip=True)
                 if not date_text:
                     continue
                 priority_date = parse_date(date_text)
@@ -247,7 +248,7 @@ def parse_bulletin(html):
                     "table_type": table_type,
                     "visa_type": visa_type,
                     "category": category,
-                    "country": countries[i],
+                    "country": country,
                     "priority_date": priority_date,
                 })
 

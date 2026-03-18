@@ -1,5 +1,6 @@
 data/*
 !data/bulletin_data.json
+!data/visa_bulletin.db
 __pycache__/
 *.pyc
 .claude/

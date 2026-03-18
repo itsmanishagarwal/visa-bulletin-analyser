@@ -103,9 +103,9 @@ tr:hover td { background: #1a1a2e; }
 
 <script>
 let D; // global data
-const VIEWS = ["trend", "monthly", "compare"];
+const VIEWS = ["compare", "trend", "monthly"];
 const VIEW_LABELS = { trend: "Trend", monthly: "Monthly View", compare: "Compare" };
-let currentView = "trend";
+let currentView = "compare";
 
 const COUNTRY_ORDER = ["All Chargeability Areas", "China", "India", "Mexico", "Philippines"];
 const EB_ORDER = ["EB-1", "EB-2", "EB-3", "EB-3 Other Workers", "EB-4", "EB-4 Religious Workers",
@@ -129,7 +129,7 @@ async function loadData() {
   buildMonthlyControls();
   buildTrendControls();
   buildCompareControls();
-  showView("trend");
+  showView("compare");
 }
 
 // ── Navigation ──

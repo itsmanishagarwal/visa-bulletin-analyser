@@ -1,4 +1,5 @@
-data/
+data/*
+!data/bulletin_data.json
 __pycache__/
 *.pyc
 .claude/

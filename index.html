@@ -10,12 +10,18 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0e1117; color: #fafafa; display: flex; min-height: 100vh; }
 
 /* Sidebar */
-.sidebar { width: 260px; background: #262730; border-right: 1px solid #3d3d4e; display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar h1 { font-size: 1.15rem; padding: 1.25rem 1rem; border-bottom: 1px solid #3d3d4e; color: #fafafa; }
+.sidebar { width: 260px; background: #262730; border-right: 1px solid #3d3d4e; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.2s ease; }
+.sidebar-header { display: flex; align-items: center; border-bottom: 1px solid #3d3d4e; }
+.sidebar h1 { font-size: 1.15rem; padding: 1.25rem 1rem; color: #fafafa; flex: 1; white-space: nowrap; overflow: hidden; }
+.sidebar-toggle { background: none; border: none; color: #999; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 1.25rem 1rem; flex-shrink: 0; }
+.sidebar-toggle:hover { color: #fafafa; }
 .sidebar nav { display: flex; flex-direction: column; }
-.sidebar nav button { background: none; border: none; border-bottom: 1px solid #3d3d4e; padding: 0.75rem 1.25rem; text-align: left; font-size: 0.95rem; cursor: pointer; color: #ccc; }
+.sidebar nav button { background: none; border: none; border-bottom: 1px solid #3d3d4e; padding: 0.75rem 1.25rem; text-align: left; font-size: 0.95rem; cursor: pointer; color: #ccc; white-space: nowrap; overflow: hidden; }
 .sidebar nav button:hover { background: #3d3d4e; }
 .sidebar nav button.active { background: #ff4b4b; color: #fff; font-weight: 600; }
+.sidebar.collapsed { width: 46px; }
+.sidebar.collapsed h1, .sidebar.collapsed nav { display: none; }
+.sidebar.collapsed .sidebar-header { justify-content: center; }
 
 /* Main */
 .main { flex: 1; padding: 2rem 2.5rem; overflow-y: auto; }
@@ -76,7 +82,10 @@ tr:hover td { background: #1a1a2e; }
 <body>
 
 <aside class="sidebar">
-  <h1>Visa Bulletin Tracker</h1>
+  <div class="sidebar-header">
+    <h1>Visa Bulletin Tracker</h1>
+    <button class="sidebar-toggle" id="sidebar-toggle" title="Collapse sidebar" aria-label="Toggle sidebar">&#171;</button>
+  </div>
   <nav id="nav"></nav>
 </aside>
 
@@ -151,6 +160,25 @@ function showView(v) {
   if (v === "monthly") renderMonthly();
   else if (v === "trend") renderTrend();
   else if (v === "compare") renderCompare();
+}
+
+// ── Sidebar collapse ──
+function initSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const toggle = document.getElementById("sidebar-toggle");
+  function apply(collapsed) {
+    sidebar.classList.toggle("collapsed", collapsed);
+    toggle.innerHTML = collapsed ? "&#187;" : "&#171;";
+    toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  }
+  apply(localStorage.getItem("sidebarCollapsed") === "true");
+  toggle.onclick = () => {
+    const collapsed = !sidebar.classList.contains("collapsed");
+    localStorage.setItem("sidebarCollapsed", collapsed);
+    apply(collapsed);
+    // let the width transition settle, then let Plotly re-fit the chart
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 250);
+  };
 }
 
 // ── Helpers ──
@@ -485,6 +513,7 @@ function renderCompare() {
 }
 
 // ── Init ──
+initSidebar();
 loadData().catch(err => {
   document.getElementById("loading").textContent = "Error: " + err.message;
   document.getElementById("loading").style.color = "#dc2626";

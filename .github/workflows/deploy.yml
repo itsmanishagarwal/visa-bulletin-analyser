@@ -48,6 +48,9 @@ jobs:
         run: |
           mkdir _site
           cp index.html _site/
+          # SPA fallback: unknown paths (e.g. /trend) serve the app, which
+          # reads location.pathname to pick the view.
+          cp index.html _site/404.html
           cp -r data _site/
           echo "visa-bulletin-analyser.krutilabs.com" > _site/CNAME
 

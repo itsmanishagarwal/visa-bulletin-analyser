@@ -98,7 +98,7 @@ tr:hover td { background: #1a1a2e; }
 .info-panel-body .eg { background: #262730; border-left: 3px solid #ff4b4b; padding: 0.75rem 1rem; border-radius: 4px; margin-top: 0.25rem; font-size: 0.86rem; color: #bbb; }
 </style>
 <!-- Cloudflare Web Analytics -->
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "2b3ad5ba63824331aad7679ecf199370"}'></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "2b3ad5ba63824331aad7679ecf199370", "spa": true}'></script>
 <!-- End Cloudflare Web Analytics -->
 </head>
 <body>
@@ -195,7 +195,8 @@ async function loadData() {
   buildMonthlyControls();
   buildTrendControls();
   buildCompareControls();
-  showView("compare");
+  window.addEventListener("popstate", () => showView(viewFromPath() || "compare", false));
+  showView(viewFromPath() || "compare", false);
 }
 
 // ── Navigation ──
@@ -210,10 +211,19 @@ function buildNav() {
   });
 }
 
-function showView(v) {
+// Which view the current URL points at (last path segment), or null.
+function viewFromPath() {
+  const seg = location.pathname.split("/").pop();
+  return VIEWS.includes(seg) ? seg : null;
+}
+
+function showView(v, push = true) {
   currentView = v;
   VIEWS.forEach(id => document.getElementById("view-" + id).style.display = id === v ? "" : "none");
   document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  // Update the URL so each view is its own page (Cloudflare SPA mode counts it).
+  // Relative URL keeps us at one path level, so `data/…` fetches still resolve.
+  if (push && v !== viewFromPath()) history.pushState({ view: v }, "", v);
   if (v === "monthly") renderMonthly();
   else if (v === "trend") renderTrend();
   else if (v === "compare") renderCompare();

@@ -30,13 +30,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
 .control-group { display: flex; flex-direction: column; gap: 0.3rem; flex: none; max-width: 220px; }
+.control-group:has(.radio-group) { max-width: none; }
 .control-group label { font-size: 0.8rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.03em; }
 .control-group select { padding: 0.45rem 0.6rem; border: 1px solid #3d3d4e; border-radius: 6px; font-size: 0.9rem; background: #262730; color: #fafafa; width: 180px; }
 .control-group select:focus { outline: none; border-color: #ff4b4b; box-shadow: 0 0 0 2px rgba(255,75,75,0.25); }
 
 /* Radio group */
 .radio-group { display: flex; gap: 0; }
-.radio-group label { padding: 0.45rem 0.9rem; border: 1px solid #3d3d4e; cursor: pointer; font-size: 0.85rem; background: #262730; color: #ccc; user-select: none; }
+.radio-group label { padding: 0.45rem 0.9rem; border: 1px solid #3d3d4e; cursor: pointer; font-size: 0.85rem; background: #262730; color: #ccc; user-select: none; white-space: nowrap; }
 .radio-group label:first-child { border-radius: 6px 0 0 6px; }
 .radio-group label:last-child { border-radius: 0 6px 6px 0; }
 .radio-group label:not(:first-child) { border-left: none; }
@@ -77,6 +78,24 @@ tr:hover td { background: #1a1a2e; }
 
 /* Loading */
 #loading { display: flex; align-items: center; justify-content: center; height: 60vh; font-size: 1.1rem; color: #666; }
+
+/* Info icon */
+.info-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 600; font-size: 0.58rem; line-height: 1; margin-left: 0.35rem; opacity: 0.55; cursor: pointer; vertical-align: middle; }
+.info-icon:hover { opacity: 1; }
+
+/* Info slide-in panel */
+.info-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 200; }
+.info-overlay.open { opacity: 1; pointer-events: auto; }
+.info-panel { position: fixed; top: 0; right: 0; height: 100vh; width: 400px; max-width: 90vw; background: #1a1a2e; border-left: 1px solid #3d3d4e; box-shadow: -4px 0 24px rgba(0,0,0,0.5); transform: translateX(100%); transition: transform 0.25s ease; z-index: 201; display: flex; flex-direction: column; }
+.info-panel.open { transform: translateX(0); }
+.info-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid #3d3d4e; flex-shrink: 0; }
+.info-panel-header h3 { font-size: 1.15rem; color: #fafafa; }
+.info-panel-close { background: none; border: none; color: #999; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.25rem; }
+.info-panel-close:hover { color: #fafafa; }
+.info-panel-body { padding: 1.5rem; overflow-y: auto; font-size: 0.92rem; line-height: 1.6; color: #ddd; }
+.info-panel-body p { margin-bottom: 0.9rem; }
+.info-panel-body strong { color: #fafafa; }
+.info-panel-body .eg { background: #262730; border-left: 3px solid #ff4b4b; padding: 0.75rem 1rem; border-radius: 4px; margin-top: 0.25rem; font-size: 0.86rem; color: #bbb; }
 </style>
 </head>
 <body>
@@ -110,6 +129,15 @@ tr:hover td { background: #1a1a2e; }
   </div>
 </div>
 
+<div class="info-overlay" id="info-overlay"></div>
+<aside class="info-panel" id="info-panel" role="dialog" aria-modal="true" aria-labelledby="info-panel-title">
+  <div class="info-panel-header">
+    <h3 id="info-panel-title"></h3>
+    <button class="info-panel-close" id="info-panel-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="info-panel-body" id="info-panel-body"></div>
+</aside>
+
 <script>
 let D; // global data
 const VIEWS = ["compare", "trend", "monthly"];
@@ -120,6 +148,32 @@ const COUNTRY_ORDER = ["All Chargeability Areas", "China", "India", "Mexico", "P
 const EB_ORDER = ["EB-1", "EB-2", "EB-3", "EB-3 Other Workers", "EB-4", "EB-4 Religious Workers",
   "EB-5 Unreserved", "EB-5 Rural", "EB-5 High Unemployment", "EB-5 Infrastructure"];
 const FAM_ORDER = ["F1", "F2A", "F2B", "F3", "F4"];
+
+// Table Type radio options, shared across all views. `info` drives the per-button ⓘ panel.
+const TABLE_TYPE_OPTIONS = [
+  {
+    label: "Final Action", value: "final_action",
+    info: {
+      title: "Final Action Dates",
+      html: `
+        <p><strong>Final Action Dates</strong> determine when a green card can actually be <strong>issued</strong>.</p>
+        <p>Your case can be approved and your green card granted only once your <strong>priority date</strong> is <strong>earlier than</strong> the Final Action Date listed for your category and country of chargeability.</p>
+        <p>On the chart, <strong>C (Current)</strong> means visas are available for everyone in that category with no wait, and <strong>U (Unavailable)</strong> means no visas are being issued that month.</p>
+        <div class="eg">Example: if the EB-2 India Final Action Date is 01JAN13, only applicants with a priority date before January&nbsp;1,&nbsp;2013 can have their green card approved this month.</div>`
+    }
+  },
+  {
+    label: "Filing", value: "filing",
+    info: {
+      title: "Dates for Filing",
+      html: `
+        <p><strong>Dates for Filing</strong> (the Filing chart) show the earliest date you can <strong>submit</strong> your green card application — Form I-485 adjustment of status, or documents to the National Visa Center.</p>
+        <p>These dates are usually <strong>ahead of</strong> the Final Action Dates, letting you file paperwork — and obtain benefits like a work permit (EAD) and travel document (Advance Parole) — <strong>before</strong> your green card can actually be approved.</p>
+        <p>Each month USCIS decides whether applicants may use this chart. When permitted, you can file once your priority date is earlier than the Filing Date.</p>
+        <div class="eg">Filing gets you into the queue early; Final Action is when the green card is actually granted.</div>`
+    }
+  }
+];
 
 function sortByOrder(items, order) {
   const inOrder = order.filter(c => items.includes(c));
@@ -181,6 +235,25 @@ function initSidebar() {
   };
 }
 
+// ── Info panel ──
+function openInfoPanel(title, html) {
+  document.getElementById("info-panel-title").textContent = title;
+  document.getElementById("info-panel-body").innerHTML = html;
+  document.getElementById("info-panel").classList.add("open");
+  document.getElementById("info-overlay").classList.add("open");
+}
+
+function closeInfoPanel() {
+  document.getElementById("info-panel").classList.remove("open");
+  document.getElementById("info-overlay").classList.remove("open");
+}
+
+function initInfoPanel() {
+  document.getElementById("info-panel-close").onclick = closeInfoPanel;
+  document.getElementById("info-overlay").onclick = closeInfoPanel;
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeInfoPanel(); });
+}
+
 // ── Helpers ──
 function el(tag, attrs, ...children) {
   const e = document.createElement(tag);
@@ -211,7 +284,16 @@ function makeRadio(name, options, selected, onChange) {
     const inp = el("input", { type: "radio", name, id, value: o.value });
     if (o.value === selected) inp.checked = true;
     inp.onchange = () => onChange(o.value);
-    const lbl = el("label", { for: id }, inp, el("span", null, o.label));
+    const span = el("span", null, o.label);
+    if (o.info) {
+      const icon = el("span", {
+        className: "info-icon", title: "What is this?", role: "button",
+        onClick: e => { e.preventDefault(); e.stopPropagation(); openInfoPanel(o.info.title, o.info.html); }
+      }, "i");
+      span.appendChild(document.createTextNode(" "));
+      span.appendChild(icon);
+    }
+    const lbl = el("label", { for: id }, inp, span);
     div.appendChild(lbl);
   });
   return div;
@@ -293,7 +375,7 @@ function buildMonthlyControls() {
   const c = document.getElementById("monthly-controls");
   c.innerHTML = "";
   c.appendChild(cg("Bulletin Month", makeSelect("m-month", D.months, mState.month, v => { mState.month = v; renderMonthly(); })));
-  c.appendChild(cg("Table Type", makeRadio("m-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], mState.tableType, v => { mState.tableType = v; renderMonthly(); })));
+  c.appendChild(cg("Table Type", makeRadio("m-tt", TABLE_TYPE_OPTIONS, mState.tableType, v => { mState.tableType = v; renderMonthly(); })));
   c.appendChild(cg("Visa Type", makeRadio("m-vt", [{ label: "Employment", value: "employment" }, { label: "Family", value: "family" }], mState.visaType, v => { mState.visaType = v; renderMonthly(); })));
 }
 
@@ -350,7 +432,7 @@ function buildTrendControls() {
   c.appendChild(cg("Visa Type", vtSelect));
   c.appendChild(cg("Categories", tCatMs));
   c.appendChild(cg("Countries", tCountryMs));
-  c.appendChild(cg("Table Type", makeRadio("t-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], tState.tableType, v => { tState.tableType = v; renderTrend(); })));
+  c.appendChild(cg("Table Type", makeRadio("t-tt", TABLE_TYPE_OPTIONS, tState.tableType, v => { tState.tableType = v; renderTrend(); })));
 }
 
 function parsePdForChart(pd, bulletinMonth) {
@@ -445,7 +527,7 @@ function buildCompareControls() {
   c.appendChild(cg("Visa Type", makeSelect("c-vt", ["Employment", "Family"], cmpState.visaType === "employment" ? "Employment" : "Family",
     v => { cmpState.visaType = v.toLowerCase(); renderCompare(); })));
   c.appendChild(cg("Country", makeSelect("c-co", D.countries, cmpState.country, v => { cmpState.country = v; renderCompare(); })));
-  c.appendChild(cg("Table Type", makeRadio("c-tt", [{ label: "Final Action", value: "final_action" }, { label: "Filing", value: "filing" }], cmpState.tableType, v => { cmpState.tableType = v; renderCompare(); })));
+  c.appendChild(cg("Table Type", makeRadio("c-tt", TABLE_TYPE_OPTIONS, cmpState.tableType, v => { cmpState.tableType = v; renderCompare(); })));
 }
 
 function renderCompare() {
@@ -514,6 +596,7 @@ function renderCompare() {
 
 // ── Init ──
 initSidebar();
+initInfoPanel();
 loadData().catch(err => {
   document.getElementById("loading").textContent = "Error: " + err.message;
   document.getElementById("loading").style.color = "#dc2626";

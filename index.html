@@ -3,7 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visa Bulletin Tracker</title>
+<title>Visa Bulletin Tracker — U.S. Priority Date History &amp; Trends</title>
+<meta name="description" content="Explore 20+ years of U.S. visa bulletin data. Track Final Action and Filing priority dates for employment (EB) and family (F) green-card categories across India, China, Mexico, and the Philippines — with interactive trend charts and month-over-month movement.">
+<link rel="canonical" href="https://visa-bulletin-analyser.krutilabs.com/">
+<meta name="theme-color" content="#0e1117">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1a2e%27/%3E%3Cpolyline%20points%3D%275%2C22%2012%2C16%2018%2C19%2027%2C7%27%20fill%3D%27none%27%20stroke%3D%27%23ff4b4b%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27/%3E%3Ccircle%20cx%3D%2727%27%20cy%3D%277%27%20r%3D%272.6%27%20fill%3D%27%234ade80%27/%3E%3C/svg%3E">
+
+<!-- Open Graph / social preview -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Visa Bulletin Tracker">
+<meta property="og:title" content="Visa Bulletin Tracker — U.S. Priority Date History &amp; Trends">
+<meta property="og:description" content="20+ years of U.S. visa bulletin data: Final Action &amp; Filing priority dates for EB and family green-card categories, with interactive trend charts and month-over-month movement.">
+<meta property="og:url" content="https://visa-bulletin-analyser.krutilabs.com/">
+<meta property="og:image" content="https://visa-bulletin-analyser.krutilabs.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Visa Bulletin Tracker — priority-date trend charts">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Visa Bulletin Tracker — U.S. Priority Date History &amp; Trends">
+<meta name="twitter:description" content="20+ years of U.S. visa bulletin data: Final Action &amp; Filing priority dates for EB and family green-card categories, with interactive trend charts.">
+<meta name="twitter:image" content="https://visa-bulletin-analyser.krutilabs.com/og-image.png">
+
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,6 +51,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end; }
 .control-group { display: flex; flex-direction: column; gap: 0.3rem; flex: none; max-width: 220px; }
 .control-group:has(.radio-group) { max-width: none; }
+
+/* Share / copy-link button */
+.share-btn { padding: 0.45rem 0.9rem; border: 1px solid #3d3d4e; border-radius: 6px; background: #262730; color: #ccc; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+.share-btn:hover { border-color: #ff4b4b; color: #fff; }
 .control-group label { font-size: 0.8rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.03em; }
 .control-group select { padding: 0.45rem 0.6rem; border: 1px solid #3d3d4e; border-radius: 6px; font-size: 0.9rem; background: #262730; color: #fafafa; width: 180px; }
 .control-group select:focus { outline: none; border-color: #ff4b4b; box-shadow: 0 0 0 2px rgba(255,75,75,0.25); }
@@ -192,11 +216,24 @@ async function loadData() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";
   buildNav();
+  applyUrlToState();
   buildMonthlyControls();
   buildTrendControls();
   buildCompareControls();
-  window.addEventListener("popstate", () => showView(viewFromPath() || "compare", false));
+  window.addEventListener("popstate", onPopState);
+  suppressUrlSync = true;
   showView(viewFromPath() || "compare", false);
+  suppressUrlSync = false;
+}
+
+function onPopState() {
+  suppressUrlSync = true;
+  applyUrlToState();
+  buildMonthlyControls();
+  buildTrendControls();
+  buildCompareControls();
+  showView(viewFromPath() || "compare", false);
+  suppressUrlSync = false;
 }
 
 // ── Navigation ──
@@ -227,6 +264,73 @@ function showView(v, push = true) {
   if (v === "monthly") renderMonthly();
   else if (v === "trend") renderTrend();
   else if (v === "compare") renderCompare();
+}
+
+// ── Shareable URL state ──
+// The path carries the view (see showView); the query string carries that
+// view's key selections, so a copied link reproduces the exact chart/table.
+let suppressUrlSync = false;
+
+function currentParams() {
+  const p = new URLSearchParams();
+  const enc = st => { p.set("vt", st.visaType === "family" ? "f" : "e"); p.set("tt", st.tableType === "filing" ? "fi" : "fa"); };
+  if (currentView === "trend") {
+    enc(tState);
+    if (tState.cats.length) p.set("cat", tState.cats.join(","));
+    if (tState.countries.length) p.set("co", tState.countries.join(","));
+  } else if (currentView === "monthly") {
+    enc(mState);
+    if (mState.month) p.set("m", mState.month);
+  } else if (currentView === "compare") {
+    enc(cmpState);
+    if (cmpState.country) p.set("co", cmpState.country);
+    if (cmpState.monthA) p.set("a", cmpState.monthA);
+    if (cmpState.monthB) p.set("b", cmpState.monthB);
+  }
+  return p;
+}
+
+// Reflect the current view + selections into the URL (no new history entry).
+function syncUrl() {
+  if (suppressUrlSync) return;
+  const qs = currentParams().toString();
+  history.replaceState({ view: currentView }, "", currentView + (qs ? "?" + qs : ""));
+}
+
+// On load / back-forward, seed the relevant view's state from the URL.
+function applyUrlToState() {
+  const view = viewFromPath();
+  const p = new URLSearchParams(location.search);
+  const vt = p.get("vt") === "f" ? "family" : p.get("vt") === "e" ? "employment" : null;
+  const tt = p.get("tt") === "fi" ? "filing" : p.get("tt") === "fa" ? "final_action" : null;
+  const csv = k => (p.get(k) || "").split(",").filter(Boolean);
+  if (view === "trend") {
+    if (vt) tState.visaType = vt;
+    if (tt) tState.tableType = tt;
+    if (csv("cat").length) tState.cats = csv("cat");
+    if (csv("co").length) tState.countries = csv("co");
+  } else if (view === "monthly") {
+    if (vt) mState.visaType = vt;
+    if (tt) mState.tableType = tt;
+    if (p.get("m")) mState.month = p.get("m");
+  } else if (view === "compare") {
+    if (vt) cmpState.visaType = vt;
+    if (tt) cmpState.tableType = tt;
+    if (p.get("co")) cmpState.country = p.get("co");
+    if (p.get("a")) cmpState.monthA = p.get("a");
+    if (p.get("b")) cmpState.monthB = p.get("b");
+  }
+}
+
+// "Copy link" button — grabs the live, state-encoding URL.
+function shareButton() {
+  const btn = el("button", { className: "share-btn", type: "button", title: "Copy a shareable link to this exact view" }, "🔗 Copy link");
+  btn.onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); btn.textContent = "✓ Copied!"; }
+    catch (e) { btn.textContent = "Copy failed"; }
+    setTimeout(() => { btn.textContent = "🔗 Copy link"; }, 1800);
+  };
+  return cg(" ", btn);
 }
 
 // ── Sidebar collapse ──
@@ -384,15 +488,17 @@ function cg(label, child) {
 let mState = { month: "", tableType: "final_action", visaType: "employment" };
 
 function buildMonthlyControls() {
-  mState.month = D.months[0] || "";
+  if (!D.months.includes(mState.month)) mState.month = D.months[0] || "";
   const c = document.getElementById("monthly-controls");
   c.innerHTML = "";
   c.appendChild(cg("Bulletin Month", makeSelect("m-month", D.months, mState.month, v => { mState.month = v; renderMonthly(); })));
   c.appendChild(cg("Table Type", makeRadio("m-tt", TABLE_TYPE_OPTIONS, mState.tableType, v => { mState.tableType = v; renderMonthly(); })));
   c.appendChild(cg("Visa Type", makeRadio("m-vt", [{ label: "Employment", value: "employment" }, { label: "Family", value: "family" }], mState.visaType, v => { mState.visaType = v; renderMonthly(); })));
+  c.appendChild(shareButton());
 }
 
 function renderMonthly() {
+  syncUrl();
   const container = document.getElementById("monthly-table");
   const records = (D.data[mState.month] || []).filter(r => r.tt === mState.tableType && r.vt === mState.visaType);
   if (!records.length) { container.innerHTML = '<div class="info">No data for this selection.</div>'; return; }
@@ -427,10 +533,13 @@ function buildTrendControls() {
   const c = document.getElementById("trend-controls");
   c.innerHTML = "";
   const cats = D.categories[tState.visaType] || [];
-  const defaultCats = cats.includes("EB-2") ? ["EB-2"] : cats.slice(0, 1);
-  const defaultCountries = D.countries.includes("India") ? ["India"] : D.countries.slice(0, 1);
-  tState.cats = defaultCats;
-  tState.countries = defaultCountries;
+  // Keep URL/prior selections when still valid, else fall back to sensible defaults.
+  let selCats = tState.cats.filter(c => cats.includes(c));
+  if (!selCats.length) selCats = cats.includes("EB-2") ? ["EB-2"] : cats.slice(0, 1);
+  let selCountries = tState.countries.filter(c => D.countries.includes(c));
+  if (!selCountries.length) selCountries = D.countries.includes("India") ? ["India"] : D.countries.slice(0, 1);
+  tState.cats = selCats;
+  tState.countries = selCountries;
 
   const vtSelect = makeSelect("t-vt", ["employment", "family"], tState.visaType, v => {
     tState.visaType = v;
@@ -446,6 +555,7 @@ function buildTrendControls() {
   c.appendChild(cg("Categories", tCatMs));
   c.appendChild(cg("Countries", tCountryMs));
   c.appendChild(cg("Table Type", makeRadio("t-tt", TABLE_TYPE_OPTIONS, tState.tableType, v => { tState.tableType = v; renderTrend(); })));
+  c.appendChild(shareButton());
 }
 
 function parsePdForChart(pd, bulletinMonth) {
@@ -456,6 +566,7 @@ function parsePdForChart(pd, bulletinMonth) {
 }
 
 function renderTrend() {
+  syncUrl();
   const chartDiv = document.getElementById("trend-chart");
   if (!tState.cats.length || !tState.countries.length) {
     chartDiv.innerHTML = '<div class="info">Select at least one category and one country.</div>';
@@ -529,8 +640,8 @@ function renderTrend() {
 let cmpState = { monthA: "", monthB: "", visaType: "employment", country: "India", tableType: "final_action" };
 
 function buildCompareControls() {
-  cmpState.monthA = D.months[Math.min(1, D.months.length - 1)] || "";
-  cmpState.monthB = D.months[0] || "";
+  if (!D.months.includes(cmpState.monthA)) cmpState.monthA = D.months[Math.min(1, D.months.length - 1)] || "";
+  if (!D.months.includes(cmpState.monthB)) cmpState.monthB = D.months[0] || "";
   if (!D.countries.includes(cmpState.country)) cmpState.country = D.countries[0] || "";
 
   const c = document.getElementById("compare-controls");
@@ -541,9 +652,11 @@ function buildCompareControls() {
     v => { cmpState.visaType = v.toLowerCase(); renderCompare(); })));
   c.appendChild(cg("Country", makeSelect("c-co", D.countries, cmpState.country, v => { cmpState.country = v; renderCompare(); })));
   c.appendChild(cg("Table Type", makeRadio("c-tt", TABLE_TYPE_OPTIONS, cmpState.tableType, v => { cmpState.tableType = v; renderCompare(); })));
+  c.appendChild(shareButton());
 }
 
 function renderCompare() {
+  syncUrl();
   const container = document.getElementById("compare-table");
   const dataA = D.data[cmpState.monthA] || [];
   const dataB = D.data[cmpState.monthB] || [];

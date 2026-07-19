@@ -49,6 +49,7 @@ jobs:
           mkdir _site
           cp index.html _site/
           cp -r data _site/
+          echo "visa-bulletin-analyser.krutilabs.com" > _site/CNAME
 
       - uses: actions/upload-pages-artifact@v3
         with:

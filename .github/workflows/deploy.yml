@@ -3,13 +3,12 @@ name: Build & Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  schedule:
-    # Daily at 06:00 UTC
-    - cron: "0 6 * * *"
   workflow_dispatch:
 
+# No scheduled run: data/bulletin_data.json is the source of truth and only
+# changes when a new bulletin is ingested and committed by hand (see README).
+# No contents:write either — nothing is committed back to the repo any more.
 permissions:
-  contents: write
   pages: write
   id-token: write
 
@@ -26,24 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Scrape & export data
-        run: python build.py --scrape --export --start 2006-01 --end $(date -d '+1 month' +%Y-%m 2>/dev/null || date -v+1m +%Y-%m)
-
-      - name: Commit data back to repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/bulletin_data.json data/visa_bulletin.db
-          git diff --cached --quiet || git commit -m "Update bulletin data [skip ci]"
-          git push
-
       - name: Prepare site
         run: |
           mkdir _site
@@ -52,7 +33,9 @@ jobs:
           # reads location.pathname to pick the view.
           cp index.html _site/404.html
           cp og-image.png _site/
-          cp -r data _site/
+          # Only the JSON ships — the saved HTML in data/bulletins/ is build input.
+          mkdir -p _site/data
+          cp data/bulletin_data.json _site/data/
           echo "visa-bulletin-analyser.krutilabs.com" > _site/CNAME
 
       - uses: actions/upload-pages-artifact@v3

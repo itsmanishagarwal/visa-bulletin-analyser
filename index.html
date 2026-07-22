@@ -211,7 +211,7 @@ function sortByOrder(items, order) {
 // ── Data loading ──
 async function loadData() {
   const resp = await fetch("data/bulletin_data.json");
-  if (!resp.ok) throw new Error("Could not load data/bulletin_data.json — run build.py --export first");
+  if (!resp.ok) throw new Error("Could not load data/bulletin_data.json — run build.py --ingest first");
   D = await resp.json();
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";

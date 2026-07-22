@@ -29,9 +29,17 @@ HTML_DIR = os.path.join(DATA_DIR, "bulletins")
 MONTH_RE = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 SUFFIXES = (".pdf", ".html", ".htm")
 
-# A complete bulletin yields ~150 rows (4 tables x categories x 5 countries).
-# Anything far below that means the page didn't parse and we should not commit it.
-MIN_RECORDS = 50
+# A complete modern bulletin is 4 tables x 15 categories x 5 countries = 150 rows.
+# A bare count is a weak guard — dropping a whole table still leaves ~100 rows —
+# so `validate_records` checks structure and the count is only a backstop.
+MIN_RECORDS = 140
+EXPECTED_COUNTRIES = 5
+EXPECTED_TABLES = {
+    ("final_action", "family"),
+    ("filing", "family"),
+    ("final_action", "employment"),
+    ("filing", "employment"),
+}
 
 
 def load_data():
@@ -70,6 +78,37 @@ def month_from_filename(name):
     if ext not in SUFFIXES or not MONTH_RE.match(stem):
         return None
     return stem, ext
+
+
+def validate_records(records):
+    """Return a list of structural problems; empty means the parse looks sane.
+
+    Catches the failure mode a record count misses: a parser that silently drops
+    a table, a category, or a country column still returns plausible-looking
+    data. Every category must carry all 5 countries, and all 4 tables must exist.
+    """
+    problems = []
+
+    if len(records) < MIN_RECORDS:
+        problems.append(f"only {len(records)} records (expected >= {MIN_RECORDS})")
+
+    groups = {}
+    for r in records:
+        table = (r["table_type"], r["visa_type"])
+        groups.setdefault(table, {}).setdefault(r["category"], set()).add(r["country"])
+
+    for table_type, visa_type in sorted(EXPECTED_TABLES - set(groups)):
+        problems.append(f"missing table: {table_type}/{visa_type}")
+
+    for (table_type, visa_type), cats in sorted(groups.items()):
+        for cat, countries in sorted(cats.items()):
+            if len(countries) != EXPECTED_COUNTRIES:
+                problems.append(
+                    f"{table_type}/{visa_type}/{cat}: {len(countries)} countries "
+                    f"(expected {EXPECTED_COUNTRIES})"
+                )
+
+    return problems
 
 
 def parse_file(path, ext):
@@ -111,9 +150,11 @@ def ingest(force=False):
             print(f"{month} — ERROR: {e}")
             continue
 
-        if len(records) < MIN_RECORDS:
-            errors.append(f"{month}: only {len(records)} records parsed (expected >= {MIN_RECORDS})")
-            print(f"{month} — ERROR: only {len(records)} records parsed")
+        problems = validate_records(records)
+        if problems:
+            for p in problems:
+                errors.append(f"{month}: {p}")
+            print(f"{month} — ERROR: failed validation ({len(problems)} problem(s))")
             continue
 
         doc["data"][month] = [

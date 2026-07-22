@@ -1,17 +1,18 @@
+"""Parse bulletin HTML into priority-date records.
+
+Fetching lives nowhere in this project any more: travel.state.gov went behind a
+Cloudflare bot challenge in July 2026 that 403s every non-browser client. The
+former `fetch_bulletin_page` / `check_latest_bulletin` / `get_bulletin_url`
+helpers were removed along with the `requests` dependency — recover them from
+git history if that block is ever lifted. Bulletins are now saved by hand; see
+README.md.
+"""
+
 import re
 import unicodedata
 from datetime import datetime
 
-import requests
 from bs4 import BeautifulSoup
-
-BASE_URL = "https://travel.state.gov"
-BULLETIN_INDEX_URL = f"{BASE_URL}/content/travel/en/legal/visa-law0/visa-bulletin.html"
-
-MONTH_NAMES = [
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december",
-]
 
 
 def _clean_text(raw):
@@ -23,23 +24,6 @@ def _clean_text(raw):
     # Remove soft hyphens
     s = s.replace("\u00ad", "")
     return s.strip()
-
-
-def get_fiscal_year(year, month):
-    """Federal fiscal year: Oct(10)-Sep(9). Oct 2025 → FY2026."""
-    if month >= 10:
-        return year + 1
-    return year
-
-
-def get_bulletin_url(year, month):
-    """Build the URL for a specific bulletin. year/month are calendar year/month."""
-    fy = get_fiscal_year(year, month)
-    month_name = MONTH_NAMES[month - 1]
-    return (
-        f"{BASE_URL}/content/travel/en/legal/visa-law0/visa-bulletin"
-        f"/{fy}/visa-bulletin-for-{month_name}-{year}.html"
-    )
 
 
 def parse_date(date_str):
@@ -71,7 +55,9 @@ def normalize_country(raw):
     dehyphenated = re.sub(r"(\w)-\s*(\w)", r"\1\2", cleaned)
     lowered = dehyphenated.lower()
 
-    if "chargeability" in lowered or "charge" in lowered and "except" in lowered:
+    # Parenthesised deliberately: "all chargeability areas" (no "except") is
+    # matched by the first clause alone, so both are load-bearing.
+    if "chargeability" in lowered or ("charge" in lowered and "except" in lowered):
         return "All Chargeability Areas"
     if "china" in lowered:
         return "China"
@@ -106,6 +92,12 @@ def normalize_category(raw, visa_type):
     # Remove hyphens breaking words
     dehyphenated = re.sub(r"(\w)-\s*(\w)", r"\1\2", cleaned)
     lowered = dehyphenated.lower()
+    # Multi-word labels are matched against a squashed form so that spacing can
+    # never decide the outcome. _clean_text strips soft hyphens, which turns
+    # "Other\xadWorkers" into "OtherWorkers" — that lost space previously made
+    # `"other worker" in lowered` fail, and the label fell through to the
+    # catch-all as a bogus "OtherWorkers" category for 24 months of bulletins.
+    squashed = re.sub(r"[^a-z0-9]", "", lowered)
 
     if visa_type == "family":
         # Normalize all family category variants
@@ -131,46 +123,40 @@ def normalize_category(raw, visa_type):
         return "EB-2"
     if lowered in ("3rd", "3rd preference"):
         return "EB-3"
-    if "other worker" in lowered:
+    if "otherworker" in squashed:
         return "EB-3 Other Workers"
     if lowered in ("4th", "4th preference"):
         return "EB-4"
-    if "religious worker" in lowered or "religious" in lowered and "worker" in lowered:
+    # Single test: "religiousworker" already implies both words are present, so
+    # the old `"religious worker" in lowered or ...` first operand was dead.
+    if "religiousworker" in squashed:
         return "EB-4 Religious Workers"
 
     # EB-5 variants
-    if "5th" in lowered or "fifth" in lowered:
-        if "unreserved" in lowered:
+    if "5th" in squashed or "fifth" in squashed:
+        if "unreserved" in squashed:
             return "EB-5 Unreserved"
-        if "rural" in lowered:
+        if "rural" in squashed:
             return "EB-5 Rural"
-        if "high unemployment" in lowered:
+        if "highunemployment" in squashed:
             return "EB-5 High Unemployment"
-        if "infrastructure" in lowered:
+        if "infrastructure" in squashed:
             return "EB-5 Infrastructure"
-        if "targeted" in lowered or "regional" in lowered:
+        if "targeted" in squashed or "regional" in squashed:
             return "EB-5 Targeted"
         return "EB-5"
 
     # Older bulletin categories that should map to EB-5
-    if "targeted" in lowered and "employment" in lowered:
+    if "targeted" in squashed and "employment" in squashed:
         return "EB-5 Targeted"
 
     # Schedule A, Iraqi/Afghani translators — skip these non-standard categories
-    if "schedule a" in lowered:
+    if "schedulea" in squashed:
         return "Schedule A Workers"
-    if "iraqi" in lowered or "afghani" in lowered or "translator" in lowered:
+    if "iraqi" in squashed or "afghani" in squashed or "translator" in squashed:
         return "Iraqi/Afghani Translators"
 
     return cleaned
-
-
-def fetch_bulletin_page(year, month):
-    """Download HTML for a specific bulletin."""
-    url = get_bulletin_url(year, month)
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    return resp.text
 
 
 def _identify_table_by_header(header_text):
@@ -253,40 +239,3 @@ def parse_bulletin(html):
                 })
 
     return records
-
-
-def check_latest_bulletin():
-    """Scrape the main visa bulletin page to find available bulletin months.
-    Returns list of (year, month, month_str) tuples for bulletins found on the index page.
-    """
-    resp = requests.get(BULLETIN_INDEX_URL, timeout=30)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    bulletins = []
-    for link in soup.find_all("a", href=True):
-        href = link["href"]
-        match = re.search(
-            r"visa-bulletin-for-(\w+)-(\d{4})\.html", href
-        )
-        if match:
-            month_name = match.group(1).lower()
-            year = int(match.group(2))
-            if month_name in MONTH_NAMES:
-                month_num = MONTH_NAMES.index(month_name) + 1
-                month_str = f"{year}-{month_num:02d}"
-                if (year, month_num, month_str) not in bulletins:
-                    bulletins.append((year, month_num, month_str))
-
-    return bulletins
-
-
-def generate_month_range(start_year, start_month, end_year, end_month):
-    """Generate (year, month) tuples from start to end inclusive."""
-    y, m = start_year, start_month
-    while (y, m) <= (end_year, end_month):
-        yield y, m
-        m += 1
-        if m > 12:
-            m = 1
-            y += 1
